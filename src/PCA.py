@@ -9,15 +9,12 @@ class PCA:
         # set the class variables
         self.X = X
         self.N = N
-
-        # center the data matrix
-        D, samples = X.shape
+        D, samples = self.X.shape
         self.rowmeans = np.mean(X, axis=1)
-        self.centered = X - np.repeat(self.rowmeans, samples, axis=0).reshape((D,samples))
+        self.rowstds = np.std(self.X, axis=1)
 
         # standardize the centered data matrix
-        self.rowstds = np.std(self.centered, axis=1)
-        self.standardized = (self.centered.T / self.rowstds).T
+        self.standardized = self.standardize(X)
 
         # compute the covariance matrix
         self.covmatrix = np.cov(self.standardized)
@@ -36,13 +33,23 @@ class PCA:
         self.N = N
         self.B = self.eigvecs[:, 0:self.N]
 
-    # center and standardize variance to 1
-    def standardize_sample(self, x):
-        return (x - self.rowmeans) / self.rowstds
+    # center and standardize variance to 1 of sample(s)
+    def standardize(self, x):
+        if len(x.shape) == 1: # 1d array
+            return (x - self.rowmeans) / self.rowstds
+        else:
+            D, samples = x.shape
+            centered = x - np.repeat(self.rowmeans, samples, axis=0).reshape((D,samples))
+            standardized = (centered.T / self.rowstds).T
+            return standardized
 
-    # shift sample back to original data space
-    def unstandardize_sample(self, x):
-        return (x * self.rowstds) + self.rowmeans
+    # shift sample(s) back to original data space
+    def unstandardize(self, x):
+        if len(x.shape) == 1:
+            return (x * self.rowstds) + self.rowmeans
+        else:
+            D, samples = x.shape
+            return (x.T * self.rowstds).T + np.repeat(self.rowmeans, samples, axis=0).reshape((D,samples))
 
     # return the covariance matrix of the centered, standardized data
     def get_covariance_matrix(self):
@@ -61,10 +68,15 @@ class PCA:
     # centers, standardizes, reduces, inverts, and unstandardizes
     # this function takes a sample and "approximates" it using PCA with given N
     def transform(self, x):
-        x_standardized = self.standardize_sample(x)
+        x_standardized = self.standardize(x)
         x_principal = self.transform_inverse(self.transform_reduce(x_standardized))
-        x_transformed = self.unstandardize_sample(x_principal)
+        x_transformed = self.unstandardize(x_principal)
         return x_transformed
+
+    def pca_reduce_dataset(self, N=-1):
+        if N > 0:
+            self.set_N(N)
+        return self.unstandardize(self.B @ self.B.T @ self.standardized)
 
 
 
