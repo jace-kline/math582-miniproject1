@@ -73,6 +73,8 @@ class PCA:
         x_transformed = self.unstandardize(x_principal)
         return x_transformed
 
+    # perform dimension reduction on the entire X data set
+    # then map back to original X space
     def pca_reduce_dataset(self, N=-1):
         if N > 0:
             self.set_N(N)
